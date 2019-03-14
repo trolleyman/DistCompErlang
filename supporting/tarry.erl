@@ -1,3 +1,4 @@
+%Flawed but often working implementation of Tarry's algorithm
 %command to run: cat test.txt | escript tarry.erl
 
 -module(tarry).
