@@ -1,4 +1,4 @@
-%command to run: cat test.txt | escript tarry.erl
+% command to run: cat input.txt | escript tarry.erl
 
 -module(tarry).
 -export([main/0, main/1, init_node/1]).
