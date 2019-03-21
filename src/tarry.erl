@@ -1,19 +1,17 @@
 %command to run: cat test.txt | escript tarry.erl
 
 -module(tarry).
--export([main/0, main/1, start_node/3]).
+-export([main/0, main/1, init_node/1]).
 
 % Needed, to disable interpreted mode, to allow us to reference functions
 % below others in the file
 -mode(compile).
 
-% TODO: Check it works in the lab (different erlang version)
-
-%-ifdef(debug).
+-ifdef(debug).
 -define(DEBUG(Format, Args), io:format(Format, Args)).
-%-else.
-%-define(DEBUG(Format, Args), id(Format), id(Args)).
-%-endif.
+-else.
+-define(DEBUG(Format, Args), id(Format), id(Args)).
+-endif.
 
 main() ->
   main([]).
@@ -26,19 +24,18 @@ main([]) ->
   ?DEBUG("Initiator: ~p~n", [InitiatorName]),
 
   % Spawn nodes
-  {InitiatorId, OtherIds} = spawn_nodes(Nodes, InitiatorName),
+  {InitiatorId, AllIds} = spawn_nodes(Nodes, InitiatorName),
 
   % Initiate tarry
-  InitiatorId ! [start, [], []],
+  InitiatorId ! [token, [], self()],
 
-  receive [token, Token] ->
-    io:format("~s~n", [fmt_token(Token)])
+  receive [token, Token, _] ->
+    io:format("~s~n", [fmt_token(lists:reverse(Token))])
   end,
 
   % Tell nodes to exit
-  lists:foreach(fun (Id) -> Id ! {exit, []} end, OtherIds),
+  lists:foreach(fun (Id) -> Id ! [exit] end, AllIds);
 
-  ok; % TODO: remove
 
 main(_) ->
   halt(1).
@@ -51,6 +48,13 @@ shuffle_list(List) ->
   random:seed(Seed),
   ?DEBUG("Seed random: ~p~n", [Seed]),
   [X||{_,X} <- lists:sort([ {random:uniform(), N} || N <- List])].
+
+list_contains([], _) -> false;
+list_contains([Item|List], SearchItem) ->
+  case SearchItem =:= Item of
+    true -> true;
+    false -> list_contains(List, SearchItem)
+  end.
 
 fmt_token(Token) ->
   string:join(Token, " ").
@@ -80,7 +84,7 @@ get_all_nodes(Acc) ->
 % Spawn nodes, and return initiator ID
 spawn_nodes(NodeSpec, InitiatorName) ->
   % Spawn nodes, and keep PIDs in a list
-  NodePids = [spawn(?MODULE, start_node, [Name, Name =:= InitiatorName, self()]) || {Name, _} <- NodeSpec],
+  NodePids = [spawn(?MODULE, init_node, [Name]) || {Name, _} <- NodeSpec],
 
   % Combine node PIDs into list
   {NodeNames, NodeNeighbours} = lists:unzip(NodeSpec),
@@ -92,67 +96,44 @@ spawn_nodes(NodeSpec, InitiatorName) ->
 
   % Get initiator PID, and return
   {InitiatorPid, _, _} = lists:keyfind(InitiatorName, 2, Nodes),
-  OtherPids = [Pid || {Pid, _, _} <- Nodes, Pid =/= InitiatorPid],
-  {InitiatorPid, OtherPids}.
+  AllPids = [Pid || {Pid, _, _} <- Nodes],
+  {InitiatorPid, AllPids}.
 
 
 % Run node - waits for neighbour ids
-start_node(Name, IsInitiator, MainProcess) ->
+init_node(Name) ->
   ?DEBUG("~p ~s: Waiting for neighbour IDs...~n", [self(), Name]),
   receive
     [neighbour_ids, Neighbours] ->
       ?DEBUG("~p ~s: Received neighbours: ~s~n", [self(), Name, fmt_nbours(Neighbours)]),
       RandomNeighbours = shuffle_list(Neighbours),
-      case IsInitiator of
-        true -> initiator_node(Name, MainProcess, RandomNeighbours);
-        false -> normal_node(Name, RandomNeighbours, none)
-      end;
+      node(Name, RandomNeighbours, none);
     Msg ->
       ?DEBUG("~p ~s: Unknown message: ~p~n", [self(), Name, Msg])
   end.
 
-% Run initiator node
-initiator_node(Name, MainProcess, []) ->
-  receive
-    [start, Token, _] ->
-      ?DEBUG("~p ~s: Initiator: no neighbours, returning token to Main: ~s~n", [self(), Name, fmt_token(Token)]),
-      MainProcess ! [token, lists:reverse([Name|Token])];
-    Msg ->
-      ?DEBUG("~p ~s: Unknown message: ~p~n", [self(), Name, Msg])
-  end;
-
-initiator_node(Name, MainProcess, Neighbours) ->
-  receive
-    [start, Token, _] ->
-      [{NPid, NName}|RemainingNeighbours] = Neighbours,
-      ?DEBUG("~p ~s: Initiator: got token, sending to neighbour ~s (~p): ~s~n", [self(), Name, NName, NPid, fmt_token(Token)]),
-      NPid ! [start, [Name|Token], self()],
-      initiator_node(Name, MainProcess, RemainingNeighbours);
-    Msg ->
-      ?DEBUG("~p ~s: Unknown message: ~p~n", [self(), Name, Msg])
-  end.
-
-% Run normal node
-normal_node(Name, Neighbours, OldParentId) ->
+% Run node
+node(Name, Neighbours, OldParentId) ->
   receive
     [exit] -> ok;
-    [start, Token, From] ->
+    [token, Token, From] ->
       % Get neighbours without ParentId
       ParentId = case OldParentId of
         none -> From;
         _ -> OldParentId
       end,
-      FilteredNeighbours = [Neighbour || {Pid, _} = Neighbour <- Neighbours, Pid =/= ParentId],
+      FilteredNeighbours = [Neighbour || {Pid, NName} = Neighbour <- Neighbours, Pid =/= ParentId, not list_contains(Token, NName)],
       case FilteredNeighbours of
         [] ->
           % No remaining neighbours - return to parent
           ?DEBUG("~p ~s: no neighbours, returning token to parent (~p): ~s~n", [self(), Name, ParentId, fmt_token(Token)]),
-          ParentId ! [start, [Name|Token], self()],
-          normal_node(Name, [], ParentId);
+          ParentId ! [token, [Name|Token], self()],
+          node(Name, [], ParentId);
         [{NPid, NName} | RemainingNeighbours] ->
+          ?DEBUG("~p ~s: remaining neighbours: ~p~n", [self(), Name, RemainingNeighbours]),
           ?DEBUG("~p ~s: got token, sending to neighbour ~s (~p): ~s~n", [self(), Name, NName, NPid, fmt_token(Token)]),
-          NPid ! [start, [Name|Token], self()],
-          normal_node(Name, RemainingNeighbours, ParentId)
+          NPid ! [token, [Name|Token], self()],
+          node(Name, RemainingNeighbours, ParentId)
       end;
     Msg ->
       ?DEBUG("~p ~s: Unknown message: ~p~n", [self(), Name, Msg])
