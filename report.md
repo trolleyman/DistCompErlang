@@ -27,8 +27,6 @@ It was decided that every message would be of a uniform format: it would be a li
 the first element was always an `atom` that formed the ID of the message, and the rest
 were arguments.
 
-Originally, there were four types of messages, but now there are only three:
-
 | ID | Args | Notes |
 |----|------|-------|
 | `neighbour_ids` | `[Neighbours]` | Sent initially to inform nodes about the PIDs and names of it's neighbours. `Neighbours` is an array of tuples of the form `{Pid, Name}`.
