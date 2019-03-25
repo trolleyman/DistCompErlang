@@ -8,24 +8,20 @@ David Somers (1567268)
 
 We developed a program that achieves all the goals set in the assignment.
 
-It takes two optional arguments:<br/>
+It also takes two optional arguments:<br/>
 `--verbose`: reports more output about the algorithm<br/>
 `--breadth-first`: performs the breadth-first algorithm, where the token is sent through each link twice.
 
-The code has been simplified from it's original form.
+In it's original implementation the code was more complex. For example, the initiator and normal nodes were different functions.
+Now, there is one entry function, `init_node`, which waits for the initial broadcast of neighbour PIDs, and a recursive main
+function that the nodes run named `node`.
 
-The initiator and normal nodes were different functions originally. Now, there is one
-entry function, `init_node`, which waits for the initial broadcast of neighbour PIDs,
-and a recursive main node function, `node`.
-
-We combined the node functions as they shared much of the same code: now the only
-difference is that an initiator node starts out with a parent, wheras a normal node
-doesn't (i.e. it starts out with the special atom `none`). This is possible because
+We combined the node functions as they shared much of the same code: now the only difference is that an initiator node starts
+out with a parent, wheras a normal node doesn't (i.e. it starts out with the special atom `none`). This is possible because
 the parent is only set on a node if it doesn't have a parent already.
 
-It was decided that every message would be of a uniform format: it would be a list, where
-the first element was always an `atom` that formed the ID of the message, and the rest
-were arguments.
+It was decided that every message would be of a uniform format: it would be a list, where the first element was always an `atom`
+that formed the ID of the message, and the rest were arguments.
 
 | ID | Args | Notes |
 |----|------|-------|
