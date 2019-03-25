@@ -1,8 +1,0 @@
-
-# Distributed and Parallel (Extended)
-# Assignment 2
-
-Authors: Mason Cusack (1414624), Vadim Makarenkov (1566767), Callum Tolley (1552710) and David Somers (1567268)
-
-
-
