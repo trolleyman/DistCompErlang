@@ -12,7 +12,7 @@ It also takes two optional arguments:<br/>
 `--verbose`: reports more output about the algorithm<br/>
 `--breadth-first`: performs the breadth-first algorithm, where the token is sent through each link twice.
 
-In it's original implementation the code was more complex. For example, the initiator and normal nodes were different functions.
+In its original implementation the code was more complex. For example, the initiator and normal nodes were different functions.
 Now, there is one entry function, `init_node`, which waits for the initial broadcast of neighbour PIDs, and a recursive main
 function that the nodes run named `node`.
 
@@ -44,7 +44,7 @@ p s t q s q p q r t u s u t r q t s p
 ```
 
 #### `input_matrix.txt`
-`input_matrix.txt` is a 3x3 matrix of nodes labelled a-i, with adjacent nodes (including diagonals) linked
+`input_matrix.txt` is a 3x3 matrix of nodes labelled from 'a' to 'i', with adjacent nodes (including diagonals) connected.
 
 ```console
 $ escript tarry.erl < input_matrix.txt
