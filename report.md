@@ -28,6 +28,7 @@ the first element was always an `atom` that formed the ID of the message, and th
 were arguments.
 
 Originally, there were four types of messages, but now there are only three:
+
 | ID | Args | Notes |
 |----|------|-------|
 | `neighbour_ids` | `[Neighbours]` | Sent initially to inform nodes about the PIDs and names of it's neighbours. `Neighbours` is an array of tuples of the form `{Pid, Name}`.
