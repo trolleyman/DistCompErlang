@@ -51,6 +51,7 @@ p s t q s q p q r t u s u t r q t s p
 
 #### `input_matrix.txt`
 `input_matrix.txt` is a 3x3 matrix of nodes labelled a-i, with adjacent nodes (including diagonals) linked
+
 ```console
 $ escript tarry.erl < input_matrix.txt
 e a d h f i f b c b f h g h d a e
